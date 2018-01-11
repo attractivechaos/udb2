@@ -45,6 +45,8 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+// https://github.com/bkthomps/Containers
+// checked out on 2018-01-11
 #include "unordered_map.h"
 
 static int compare_int(const void *const one, const void *const two) // FIXME: this doesn't compare uint32_t

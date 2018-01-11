@@ -59,7 +59,7 @@ double time_32(uint32_t n, uint32_t x0)
 {
 	double t;
 	uint32_t i, x, n_unique = 0;
-	intcell_t *h = 0, *r;
+	intcell_t *h = 0, *r, *tmp;
 	t = cputime();
 	for (i = 0, x = x0; i < n; ++i) {
 		uint32_t y;
@@ -75,5 +75,9 @@ double time_32(uint32_t n, uint32_t x0)
 		++r->cnt;
 	}
 	fprintf(stderr, "# unique keys: %d\n", n_unique);
+	HASH_ITER(hh, h, r, tmp) {
+		HASH_DEL(h, r);
+		free(r);
+	}
 	return cputime() - t;
 }
