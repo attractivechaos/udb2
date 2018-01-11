@@ -41,29 +41,37 @@ int main(int argc, char *argv[])
 	t0 = time_rng(n, x0);
 	fprintf(stderr, "CPU time spent on RNG: %.3f sec\n", t0);
 	t1 = time_32(n, x0);
-	fprintf(stderr, "CPU time (n=%d): %.3f sec\n", n, t1 - t0);
+	fprintf(stderr, "CPU time (n=%ld): %.3f sec\n", (long)n, t1 - t0);
 	return 0;
 }
 
-#include "khash.h"
-KHASH_INIT(32, uint32_t, uint32_t, 1, hash32, kh_int_hash_equal)
+#include "uthash.h"
+
+typedef struct {
+	uint32_t key;
+	uint32_t cnt;
+	UT_hash_handle hh;
+} intcell_t;
 
 double time_32(uint32_t n, uint32_t x0)
 {
 	double t;
-	uint32_t i, x;
-	khash_t(32) *h;
+	uint32_t i, x, n_unique = 0;
+	intcell_t *h = 0, *r;
 	t = cputime();
-	h = kh_init(32);
 	for (i = 0, x = x0; i < n; ++i) {
-		khint_t k;
-		int absent;
+		uint32_t y;
 		x = hash32(x);
-		k = kh_put(32, h, x % (n/2), &absent);
-		if (absent) kh_val(h, k) = 0;
-		++kh_val(h, k);
+		y = x % (n/2);
+		HASH_FIND_INT(h, &y, r);
+		if (r == 0) {
+			r = (intcell_t*)malloc(sizeof(intcell_t));
+			r->key = y, r->cnt = 0;
+			HASH_ADD_INT(h, key, r);
+			++n_unique;
+		}
+		++r->cnt;
 	}
-	kh_destroy(32, h);
-	fprintf(stderr, "# unique keys: %d\n", kh_size(h));
+	fprintf(stderr, "# unique keys: %d\n", n_unique);
 	return cputime() - t;
 }
