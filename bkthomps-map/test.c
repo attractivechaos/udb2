@@ -41,39 +41,45 @@ int main(int argc, char *argv[])
 	t0 = time_rng(n, x0);
 	fprintf(stderr, "CPU time spent on RNG: %.3f sec\n", t0);
 	t1 = time_32(n, x0);
-	fprintf(stderr, "CPU time (n=%ld): %.3f sec\n", (long)n, t1 - t0);
+	fprintf(stderr, "CPU time (n=%d): %.3f sec\n", n, t1 - t0);
 	return 0;
 }
 
-// https://github.com/troydhanson/uthash
-// checked out on 2018-01-11
-#include "uthash.h"
+#include "unordered_map.h"
 
-typedef struct {
-	uint32_t key;
-	uint32_t cnt;
-	UT_hash_handle hh;
-} intcell_t;
+static int compare_int(const void *const one, const void *const two) // FIXME: this doesn't compare uint32_t
+{
+	const int a = *(int *) one;
+	const int b = *(int *) two;
+	return a - b;
+}
+
+static unsigned long hash_int(const void *const key)
+{
+	uint32_t x = *(uint32_t*)key;
+    return hash32(x);
+}
 
 double time_32(uint32_t n, uint32_t x0)
 {
 	double t;
-	uint32_t i, x, n_unique = 0;
-	intcell_t *h = 0, *r;
+	uint32_t i, x;
+	unordered_map h;
 	t = cputime();
+	h = unordered_map_init(sizeof(uint32_t), sizeof(uint32_t), hash_int, compare_int);
 	for (i = 0, x = x0; i < n; ++i) {
-		uint32_t y;
+		uint32_t key, v;
 		x = hash32(x);
-		y = x % (n/2);
-		HASH_FIND_INT(h, &y, r);
-		if (r == 0) {
-			r = (intcell_t*)malloc(sizeof(intcell_t));
-			r->key = y, r->cnt = 0;
-			HASH_ADD_INT(h, key, r);
-			++n_unique;
+		key = x % (n/2);
+		if (!unordered_map_get(&v, h, &key)) {
+			v = 1;
+			unordered_map_put(h, &key, &v);
+		} else {
+			++v;
+			unordered_map_put(h, &key, &v);
 		}
-		++r->cnt;
 	}
-	fprintf(stderr, "# unique keys: %d\n", n_unique);
+	fprintf(stderr, "# unique keys: %d\n", unordered_map_size(h));
+	unordered_map_destroy(h);
 	return cputime() - t;
 }
