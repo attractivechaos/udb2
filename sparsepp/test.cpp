@@ -1,4 +1,7 @@
 #include "../common.c"
+
+// https://github.com/greg7mdp/sparsepp
+// cloned on 2018-01-12
 #include "sparsepp/spp.h"
 
 void test_int(uint32_t n, uint32_t x0)
