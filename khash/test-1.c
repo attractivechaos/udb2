@@ -22,6 +22,6 @@ void test_int(uint32_t n, uint32_t x0)
 		k = kh_put(32b, h, a, &absent);
 		z += ++kh_key(h, k).cnt;
 	}
-	kh_destroy(32b, h);
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kh_size(h), z);
+	kh_destroy(32b, h);
 }

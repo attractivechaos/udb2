@@ -15,6 +15,6 @@ void test_int(uint32_t n, uint32_t x0)
 		if (absent) kh_val(h, k) = 0;
 		z += ++kh_val(h, k);
 	}
-	kh_destroy(32a, h);
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kh_size(h), z);
+	kh_destroy(32a, h);
 }
