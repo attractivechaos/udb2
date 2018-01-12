@@ -23,6 +23,17 @@ static double cputime(void)
 	return r.ru_utime.tv_sec + r.ru_stime.tv_sec + 1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec);
 }
 
+static long peakrss(void)
+{
+	struct rusage r;
+	getrusage(RUSAGE_SELF, &r);
+#ifdef __linux__
+	return r.ru_maxrss * 1024;
+#else
+	return r.ru_maxrss;
+#endif
+}
+
 static inline uint32_t get_key(const uint32_t n, const uint32_t x)
 {
 	return hash32(x % (n>>2));
@@ -43,22 +54,32 @@ int main(int argc, char *argv[])
 {
 	void test_int(uint32_t n, uint32_t x0);
 	int c;
-	double t, t0, t1;
-	uint32_t n = 10000000, x0 = 1;
+	double t, t0;
+	uint32_t i, m = 5, max = 50000000, n = 10000000, x0 = 1, step;
+	uint64_t sum;
+	long m0;
 
-	while ((c = getopt(argc, argv, "n:0:")) >= 0) {
+	while ((c = getopt(argc, argv, "n:x:0:k:")) >= 0) {
 		if (c == 'n') n = atol(optarg);
+		else if (c == 'x') max = atol(optarg);
 		else if (c == '0') x0 = atol(optarg);
+		else if (c == 'k') m = atoi(optarg);
 	}
 
 	t = cputime();
-	traverse_rng(n, x0);
+	sum = traverse_rng(n, x0);
 	t0 = cputime() - t;
-	fprintf(stderr, "CPU time spent on RNG: %.3f sec\n", t0);
+	fprintf(stderr, "CPU time spent on RNG: %.3f sec; total sum: %lu\n", t0, (unsigned long)sum);
+	m0 = peakrss();
 
-	t = cputime();
-	test_int(n, x0);
-	t1 = cputime() - t;
-	fprintf(stderr, "CPU time on hash table operations: %.3f sec\n", t1 - t0);
+	step = (max - n) / m;
+	for (i = 0; i <= m; ++i, n += step) {
+		double t, mem;
+		t = cputime();
+		test_int(n, x0);
+		t = cputime() - t;
+		mem = (peakrss() - m0) / 1024.0 / 1024.0;
+		printf("%d\t%d\t%.3f\t%.3f\t%.4f\t%.4f\n", i, n, t, mem, t * 1e6 / n, mem * 1e6 / n);
+	}
 	return 0;
 }
