@@ -7,7 +7,8 @@ void test_int(uint32_t n, uint32_t x0)
 	std::unordered_map<uint32_t, uint32_t> h;
 	for (i = 0, x = x0; i < n; ++i) {
 		x = hash32(x);
-		z += ++h[get_key(n, x)];
+		auto p = h.emplace(get_key(n, x), 0);
+		z += ++p.first->second;
 	}
 	fprintf(stderr, "# unique keys: %ld; checksum: %u\n", h.size(), z);
 }
