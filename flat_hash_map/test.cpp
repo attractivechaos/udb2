@@ -4,10 +4,20 @@
 // cloned on 2018-01-12
 #include "flat_hash_map.hpp"
 
+struct MyHashFunc
+{
+	inline size_t operator()(const uint32_t &x)
+	{
+		return hash32(x);
+	}
+	typedef ska::power_of_two_hash_policy hash_policy;
+};
+
 void test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
-	ska::flat_hash_map<uint32_t, uint32_t> h;
+	ska::flat_hash_map<uint32_t, uint32_t, MyHashFunc> h;
+	h.max_load_factor(0.9f);
 	for (i = 0, x = x0; i < n; ++i) {
 		x = hash32(x);
 		z += ++h[get_key(n, x)];
