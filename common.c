@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
+static inline uint32_t hash32(uint32_t key)
+{
+    key += ~(key << 15);
+    key ^=  (key >> 10);
+    key +=  (key << 3);
+    key ^=  (key >> 6);
+    key += ~(key << 11);
+    key ^=  (key >> 16);
+    return key;
+}
+
+static double cputime(void)
+{
+	struct rusage r;
+	getrusage(RUSAGE_SELF, &r);
+	return r.ru_utime.tv_sec + r.ru_stime.tv_sec + 1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec);
+}
+
+static inline uint32_t get_key(const uint32_t n, const uint32_t x)
+{
+	return hash32(x % (n>>2));
+}
+
+uint64_t traverse_rng(uint32_t n, uint32_t x0)
+{
+	uint64_t sum = 0;
+	uint32_t i, x;
+	for (i = 0, x = x0; i < n; ++i) {
+		x = hash32(x);
+		sum += get_key(n, x);
+	}
+	return sum;
+}
+
+int main(int argc, char *argv[])
+{
+	void test_int(uint32_t n, uint32_t x0);
+	int c;
+	double t, t0, t1;
+	uint32_t n = 10000000, x0 = 1;
+
+	while ((c = getopt(argc, argv, "n:0:")) >= 0) {
+		if (c == 'n') n = atol(optarg);
+		else if (c == '0') x0 = atol(optarg);
+	}
+
+	t = cputime();
+	traverse_rng(n, x0);
+	t0 = cputime() - t;
+	fprintf(stderr, "CPU time spent on RNG: %.3f sec\n", t0);
+
+	t = cputime();
+	test_int(n, x0);
+	t1 = cputime() - t;
+	fprintf(stderr, "CPU time on hash table operations: %.3f sec\n", t1 - t0);
+	return 0;
+}

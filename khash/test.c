@@ -1,69 +1,48 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-static inline uint32_t hash32(uint32_t key)
-{
-    key += ~(key << 15);
-    key ^=  (key >> 10);
-    key +=  (key << 3);
-    key ^=  (key >> 6);
-    key += ~(key << 11);
-    key ^=  (key >> 16);
-    return key;
-}
-
-static double cputime(void)
-{
-	struct rusage r;
-	getrusage(RUSAGE_SELF, &r);
-	return r.ru_utime.tv_sec + r.ru_stime.tv_sec + 1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec);
-}
-
-double time_rng(uint32_t n, uint32_t x0)
-{
-	uint32_t i, x;
-	double t;
-	t = cputime();
-	for (i = 0, x = x0; i < n; ++i)
-		x = hash32(x);
-	return cputime() - t;
-}
-
-int main(int argc, char *argv[])
-{
-	double time_32(uint32_t n, uint32_t x0);
-	double t0, t1;
-	uint32_t n = 10000000, x0 = 1;
-	if (argc > 1) n = atol(argv[1]);
-	t0 = time_rng(n, x0);
-	fprintf(stderr, "CPU time spent on RNG: %.3f sec\n", t0);
-	t1 = time_32(n, x0);
-	fprintf(stderr, "CPU time (n=%d): %.3f sec\n", n, t1 - t0);
-	return 0;
-}
-
+#include "../common.c"
 #include "khash.h"
-KHASH_INIT(32, uint32_t, uint32_t, 1, hash32, kh_int_hash_equal)
 
-double time_32(uint32_t n, uint32_t x0)
+#if !defined(ALT) || ALT == 0
+KHASH_INIT(32a, uint32_t, uint32_t, 1, hash32, kh_int_hash_equal)
+
+void test_int(uint32_t n, uint32_t x0)
 {
-	double t;
 	uint32_t i, x;
-	khash_t(32) *h;
-	t = cputime();
-	h = kh_init(32);
+	khash_t(32a) *h;
+	h = kh_init(32a);
 	for (i = 0, x = x0; i < n; ++i) {
 		khint_t k;
 		int absent;
 		x = hash32(x);
-		k = kh_put(32, h, x % (n/2), &absent);
+		k = kh_put(32a, h, get_key(n, x), &absent);
 		if (absent) kh_val(h, k) = 0;
 		++kh_val(h, k);
 	}
-	kh_destroy(32, h);
+	kh_destroy(32a, h);
 	fprintf(stderr, "# unique keys: %d\n", kh_size(h));
-	return cputime() - t;
 }
+#elif ALT == 1
+typedef struct {
+	uint32_t key, cnt;
+} aux_t;
+#define aux_eq(a, b) ((a).key == (b).key)
+#define aux_hash(a) (hash32((a).key))
+KHASH_INIT(32b, aux_t, char, 0, aux_hash, aux_eq)
+
+void test_int(uint32_t n, uint32_t x0)
+{
+	uint32_t i, x;
+	khash_t(32b) *h;
+	h = kh_init(32b);
+	for (i = 0, x = x0; i < n; ++i) {
+		aux_t a;
+		khint_t k;
+		int absent;
+		x = hash32(x);
+		a.key = get_key(n, x), a.cnt = 0;
+		k = kh_put(32b, h, a, &absent);
+		++kh_key(h, k).cnt;
+	}
+	kh_destroy(32b, h);
+	fprintf(stderr, "# unique keys: %d\n", kh_size(h));
+}
+#endif
