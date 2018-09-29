@@ -7,13 +7,12 @@
 #include <cstdint>
 #include <cstddef>
 #include <functional>
-#include <vector>
 #include <cmath>
-#include <array>
 #include <algorithm>
 #include <iterator>
 #include <utility>
 #include <type_traits>
+#include <stdexcept>
 
 #ifdef _MSC_VER
 #define SKA_NOINLINE(...) __declspec(noinline) __VA_ARGS__
@@ -25,6 +24,7 @@ namespace ska
 {
 struct prime_number_hash_policy;
 struct power_of_two_hash_policy;
+struct fibonacci_hash_policy;
 
 namespace detailv3
 {
@@ -156,14 +156,24 @@ struct KeyOrValueEquality : functor_storage<bool, key_equal>
         return static_cast<equality_storage &>(*this)(lhs.first, rhs.first);
     }
 };
+static constexpr int8_t min_lookups = 4;
 template<typename T>
 struct sherwood_v3_entry
 {
-    static constexpr sherwood_v3_entry special_end_entry()
+    sherwood_v3_entry()
     {
-        sherwood_v3_entry end;
-        end.distance_from_desired = special_end_value;
-        return end;
+    }
+    sherwood_v3_entry(int8_t distance_from_desired)
+        : distance_from_desired(distance_from_desired)
+    {
+    }
+    ~sherwood_v3_entry()
+    {
+    }
+    static sherwood_v3_entry * empty_default_table()
+    {
+        static sherwood_v3_entry result[min_lookups] = { {}, {}, {}, {special_end_value} };
+        return result;
     }
 
     bool has_value() const
@@ -195,30 +205,6 @@ struct sherwood_v3_entry
     static constexpr int8_t special_end_value = 0;
     union { T value; };
 };
-template<typename T>
-struct sherwood_v3_entry_constexpr
-{
-    static constexpr sherwood_v3_entry_constexpr special_end_entry()
-    {
-        sherwood_v3_entry_constexpr end;
-        end.distance_from_desired = sherwood_v3_entry<T>::special_end_value;
-        return end;
-    }
-
-    int8_t distance_from_desired = -1;
-    typename std::aligned_storage<sizeof(T), alignof(T)>::type bytes = {};
-};
-static constexpr int8_t min_lookups = 4;
-template<typename T>
-struct EntryDefaultTable
-{
-    static constexpr const sherwood_v3_entry_constexpr<T> table[min_lookups] =
-    {
-        {}, {}, {}, sherwood_v3_entry_constexpr<T>::special_end_entry()
-    };
-};
-template<typename T>
-constexpr const sherwood_v3_entry_constexpr<T> EntryDefaultTable<T>::table[min_lookups];
 
 inline int8_t log2(size_t value)
 {
@@ -241,7 +227,6 @@ inline int8_t log2(size_t value)
     value |= value >> 32;
     return table[((value - (value >> 1)) * 0x07EDD5E59A4E28C2) >> 58];
 }
-void throw_out_of_range();
 
 template<typename T, bool>
 struct AssignIfTrue
@@ -284,7 +269,7 @@ template<typename...> using void_t = void;
 template<typename T, typename = void>
 struct HashPolicySelector
 {
-    typedef prime_number_hash_policy type;
+    typedef fibonacci_hash_policy type;
 };
 template<typename T>
 struct HashPolicySelector<T, void_t<typename T::hash_policy>>
@@ -464,6 +449,11 @@ public:
     template<typename ValueType>
     struct templated_iterator
     {
+        templated_iterator() = default;
+        templated_iterator(EntryPointer current)
+            : current(current)
+        {
+        }
         EntryPointer current = EntryPointer();
 
         using iterator_category = std::forward_iterator_tag;
@@ -645,11 +635,10 @@ public:
             return;
         int8_t new_max_lookups = compute_max_lookups(num_buckets);
         EntryPointer new_buckets(AllocatorTraits::allocate(*this, num_buckets + new_max_lookups));
-        for (EntryPointer it = new_buckets, real_end = it + static_cast<ptrdiff_t>(num_buckets + new_max_lookups - 1); it != real_end; ++it)
-        {
+        EntryPointer special_end_item = new_buckets + static_cast<ptrdiff_t>(num_buckets + new_max_lookups - 1);
+        for (EntryPointer it = new_buckets; it != special_end_item; ++it)
             it->distance_from_desired = -1;
-        }
-        new_buckets[num_buckets + new_max_lookups - 1].distance_from_desired = Entry::special_end_value;
+        special_end_item->distance_from_desired = Entry::special_end_value;
         std::swap(entries, new_buckets);
         std::swap(num_slots_minus_one, num_buckets);
         --num_slots_minus_one;
@@ -694,6 +683,8 @@ public:
 
     iterator erase(const_iterator begin_it, const_iterator end_it)
     {
+        if (begin_it == end_it)
+            return { begin_it.current };
         for (EntryPointer it = begin_it.current, end = end_it.current; it != end; ++it)
         {
             if (it->has_value())
@@ -764,7 +755,7 @@ public:
     }
     size_t bucket_count() const
     {
-        return num_slots_minus_one + 1;
+        return num_slots_minus_one ? num_slots_minus_one + 1 : 0;
     }
     size_type max_bucket_count() const
     {
@@ -797,8 +788,7 @@ public:
     }
 
 private:
-    using DefaultTable = detailv3::EntryDefaultTable<T>;
-    EntryPointer entries = const_cast<Entry *>(reinterpret_cast<const Entry *>(DefaultTable::table));
+    EntryPointer entries = Entry::empty_default_table();
     size_t num_slots_minus_one = 0;
     typename HashPolicySelector<ArgumentHash>::type hash_policy;
     int8_t max_lookups = detailv3::min_lookups - 1;
@@ -835,7 +825,7 @@ private:
     SKA_NOINLINE(std::pair<iterator, bool>) emplace_new_key(int8_t distance_from_desired, EntryPointer current_entry, Key && key, Args &&... args)
     {
         using std::swap;
-        if (num_slots_minus_one == 0 || distance_from_desired == max_lookups || static_cast<double>(num_elements + 1) / static_cast<double>(bucket_count()) > _max_load_factor)
+        if (num_slots_minus_one == 0 || distance_from_desired == max_lookups || num_elements + 1 > (num_slots_minus_one + 1) * static_cast<double>(_max_load_factor))
         {
             grow();
             return emplace(std::forward<Key>(key), std::forward<Args>(args)...);
@@ -884,7 +874,7 @@ private:
 
     void deallocate_data(EntryPointer begin, size_t num_slots_minus_one, int8_t max_lookups)
     {
-        if (begin != const_cast<Entry *>(reinterpret_cast<const Entry *>(DefaultTable::table)))
+        if (begin != Entry::empty_default_table())
         {
             AllocatorTraits::deallocate(*this, begin, num_slots_minus_one + max_lookups + 1);
         }
@@ -893,7 +883,7 @@ private:
     void reset_to_empty_state()
     {
         deallocate_data(entries, num_slots_minus_one, max_lookups);
-        entries = const_cast<Entry *>(reinterpret_cast<const Entry *>(DefaultTable::table));
+        entries = Entry::empty_default_table();
         num_slots_minus_one = 0;
         hash_policy.reset();
         max_lookups = detailv3::min_lookups - 1;
@@ -1128,53 +1118,9 @@ struct prime_number_hash_policy
     static size_t mod14480561146010017169(size_t hash) { return hash % 14480561146010017169llu; }
     static size_t mod18446744073709551557(size_t hash) { return hash % 18446744073709551557llu; }
 
-    size_t index_for_hash(size_t hash, size_t /*num_slots_minus_one*/) const
-    {
-        static constexpr size_t (* const mod_functions[])(size_t) =
-        {
-            &mod0, &mod2, &mod3, &mod5, &mod7, &mod11, &mod13, &mod17, &mod23, &mod29, &mod37,
-            &mod47, &mod59, &mod73, &mod97, &mod127, &mod151, &mod197, &mod251, &mod313, &mod397,
-            &mod499, &mod631, &mod797, &mod1009, &mod1259, &mod1597, &mod2011, &mod2539, &mod3203,
-            &mod4027, &mod5087, &mod6421, &mod8089, &mod10193, &mod12853, &mod16193, &mod20399,
-            &mod25717, &mod32401, &mod40823, &mod51437, &mod64811, &mod81649, &mod102877,
-            &mod129607, &mod163307, &mod205759, &mod259229, &mod326617, &mod411527, &mod518509,
-            &mod653267, &mod823117, &mod1037059, &mod1306601, &mod1646237, &mod2074129,
-            &mod2613229, &mod3292489, &mod4148279, &mod5226491, &mod6584983, &mod8296553,
-            &mod10453007, &mod13169977, &mod16593127, &mod20906033, &mod26339969, &mod33186281,
-            &mod41812097, &mod52679969, &mod66372617, &mod83624237, &mod105359939, &mod132745199,
-            &mod167248483, &mod210719881, &mod265490441, &mod334496971, &mod421439783,
-            &mod530980861, &mod668993977, &mod842879579, &mod1061961721, &mod1337987929,
-            &mod1685759167, &mod2123923447, &mod2675975881, &mod3371518343, &mod4247846927,
-            &mod5351951779, &mod6743036717, &mod8495693897, &mod10703903591, &mod13486073473,
-            &mod16991387857, &mod21407807219, &mod26972146961, &mod33982775741, &mod42815614441,
-            &mod53944293929, &mod67965551447, &mod85631228929, &mod107888587883, &mod135931102921,
-            &mod171262457903, &mod215777175787, &mod271862205833, &mod342524915839,
-            &mod431554351609, &mod543724411781, &mod685049831731, &mod863108703229,
-            &mod1087448823553, &mod1370099663459, &mod1726217406467, &mod2174897647073,
-            &mod2740199326961, &mod3452434812973, &mod4349795294267, &mod5480398654009,
-            &mod6904869625999, &mod8699590588571, &mod10960797308051, &mod13809739252051,
-            &mod17399181177241, &mod21921594616111, &mod27619478504183, &mod34798362354533,
-            &mod43843189232363, &mod55238957008387, &mod69596724709081, &mod87686378464759,
-            &mod110477914016779, &mod139193449418173, &mod175372756929481, &mod220955828033581,
-            &mod278386898836457, &mod350745513859007, &mod441911656067171, &mod556773797672909,
-            &mod701491027718027, &mod883823312134381, &mod1113547595345903, &mod1402982055436147,
-            &mod1767646624268779, &mod2227095190691797, &mod2805964110872297, &mod3535293248537579,
-            &mod4454190381383713, &mod5611928221744609, &mod7070586497075177, &mod8908380762767489,
-            &mod11223856443489329, &mod14141172994150357, &mod17816761525534927,
-            &mod22447712886978529, &mod28282345988300791, &mod35633523051069991,
-            &mod44895425773957261, &mod56564691976601587, &mod71267046102139967,
-            &mod89790851547914507, &mod113129383953203213, &mod142534092204280003,
-            &mod179581703095829107, &mod226258767906406483, &mod285068184408560057,
-            &mod359163406191658253, &mod452517535812813007, &mod570136368817120201,
-            &mod718326812383316683, &mod905035071625626043, &mod1140272737634240411,
-            &mod1436653624766633509, &mod1810070143251252131, &mod2280545475268481167,
-            &mod2873307249533267101, &mod3620140286502504283, &mod4561090950536962147,
-            &mod5746614499066534157, &mod7240280573005008577, &mod9122181901073924329,
-            &mod11493228998133068689, &mod14480561146010017169, &mod18446744073709551557
-        };
-        return mod_functions[prime_index](hash);
-    }
-    uint8_t next_size_over(size_t & size) const
+    using mod_function = size_t (*)(size_t);
+
+    mod_function next_size_over(size_t & size) const
     {
         // prime numbers generated by the following method:
         // 1. start with a prime p = 2
@@ -1228,21 +1174,72 @@ struct prime_number_hash_policy
             5746614499066534157llu, 7240280573005008577llu, 9122181901073924329llu,
             11493228998133068689llu, 14480561146010017169llu, 18446744073709551557llu
         };
+        static constexpr size_t (* const mod_functions[])(size_t) =
+        {
+            &mod0, &mod2, &mod3, &mod5, &mod7, &mod11, &mod13, &mod17, &mod23, &mod29, &mod37,
+            &mod47, &mod59, &mod73, &mod97, &mod127, &mod151, &mod197, &mod251, &mod313, &mod397,
+            &mod499, &mod631, &mod797, &mod1009, &mod1259, &mod1597, &mod2011, &mod2539, &mod3203,
+            &mod4027, &mod5087, &mod6421, &mod8089, &mod10193, &mod12853, &mod16193, &mod20399,
+            &mod25717, &mod32401, &mod40823, &mod51437, &mod64811, &mod81649, &mod102877,
+            &mod129607, &mod163307, &mod205759, &mod259229, &mod326617, &mod411527, &mod518509,
+            &mod653267, &mod823117, &mod1037059, &mod1306601, &mod1646237, &mod2074129,
+            &mod2613229, &mod3292489, &mod4148279, &mod5226491, &mod6584983, &mod8296553,
+            &mod10453007, &mod13169977, &mod16593127, &mod20906033, &mod26339969, &mod33186281,
+            &mod41812097, &mod52679969, &mod66372617, &mod83624237, &mod105359939, &mod132745199,
+            &mod167248483, &mod210719881, &mod265490441, &mod334496971, &mod421439783,
+            &mod530980861, &mod668993977, &mod842879579, &mod1061961721, &mod1337987929,
+            &mod1685759167, &mod2123923447, &mod2675975881, &mod3371518343, &mod4247846927,
+            &mod5351951779, &mod6743036717, &mod8495693897, &mod10703903591, &mod13486073473,
+            &mod16991387857, &mod21407807219, &mod26972146961, &mod33982775741, &mod42815614441,
+            &mod53944293929, &mod67965551447, &mod85631228929, &mod107888587883, &mod135931102921,
+            &mod171262457903, &mod215777175787, &mod271862205833, &mod342524915839,
+            &mod431554351609, &mod543724411781, &mod685049831731, &mod863108703229,
+            &mod1087448823553, &mod1370099663459, &mod1726217406467, &mod2174897647073,
+            &mod2740199326961, &mod3452434812973, &mod4349795294267, &mod5480398654009,
+            &mod6904869625999, &mod8699590588571, &mod10960797308051, &mod13809739252051,
+            &mod17399181177241, &mod21921594616111, &mod27619478504183, &mod34798362354533,
+            &mod43843189232363, &mod55238957008387, &mod69596724709081, &mod87686378464759,
+            &mod110477914016779, &mod139193449418173, &mod175372756929481, &mod220955828033581,
+            &mod278386898836457, &mod350745513859007, &mod441911656067171, &mod556773797672909,
+            &mod701491027718027, &mod883823312134381, &mod1113547595345903, &mod1402982055436147,
+            &mod1767646624268779, &mod2227095190691797, &mod2805964110872297, &mod3535293248537579,
+            &mod4454190381383713, &mod5611928221744609, &mod7070586497075177, &mod8908380762767489,
+            &mod11223856443489329, &mod14141172994150357, &mod17816761525534927,
+            &mod22447712886978529, &mod28282345988300791, &mod35633523051069991,
+            &mod44895425773957261, &mod56564691976601587, &mod71267046102139967,
+            &mod89790851547914507, &mod113129383953203213, &mod142534092204280003,
+            &mod179581703095829107, &mod226258767906406483, &mod285068184408560057,
+            &mod359163406191658253, &mod452517535812813007, &mod570136368817120201,
+            &mod718326812383316683, &mod905035071625626043, &mod1140272737634240411,
+            &mod1436653624766633509, &mod1810070143251252131, &mod2280545475268481167,
+            &mod2873307249533267101, &mod3620140286502504283, &mod4561090950536962147,
+            &mod5746614499066534157, &mod7240280573005008577, &mod9122181901073924329,
+            &mod11493228998133068689, &mod14480561146010017169, &mod18446744073709551557
+        };
         const size_t * found = std::lower_bound(std::begin(prime_list), std::end(prime_list) - 1, size);
         size = *found;
-        return static_cast<uint8_t>(1 + found - prime_list);
+        return mod_functions[1 + found - prime_list];
     }
-    void commit(uint8_t new_prime_index)
+    void commit(mod_function new_mod_function)
     {
-        prime_index = new_prime_index;
+        current_mod_function = new_mod_function;
     }
     void reset()
     {
-        prime_index = 0;
+        current_mod_function = &mod0;
+    }
+
+    size_t index_for_hash(size_t hash, size_t /*num_slots_minus_one*/) const
+    {
+        return current_mod_function(hash);
+    }
+    size_t keep_in_range(size_t index, size_t num_slots_minus_one) const
+    {
+        return index > num_slots_minus_one ? current_mod_function(index) : index;
     }
 
 private:
-    uint8_t prime_index = 0;
+    mod_function current_mod_function = &mod0;
 };
 
 struct power_of_two_hash_policy
@@ -1250,6 +1247,10 @@ struct power_of_two_hash_policy
     size_t index_for_hash(size_t hash, size_t num_slots_minus_one) const
     {
         return hash & num_slots_minus_one;
+    }
+    size_t keep_in_range(size_t index, size_t num_slots_minus_one) const
+    {
+        return index_for_hash(index, num_slots_minus_one);
     }
     int8_t next_size_over(size_t & size) const
     {
@@ -1263,6 +1264,35 @@ struct power_of_two_hash_policy
     {
     }
 
+};
+
+struct fibonacci_hash_policy
+{
+    size_t index_for_hash(size_t hash, size_t /*num_slots_minus_one*/) const
+    {
+        return (11400714819323198485ull * hash) >> shift;
+    }
+    size_t keep_in_range(size_t index, size_t num_slots_minus_one) const
+    {
+        return index & num_slots_minus_one;
+    }
+
+    int8_t next_size_over(size_t & size) const
+    {
+        size = std::max(size_t(2), detailv3::next_power_of_two(size));
+        return 64 - detailv3::log2(size);
+    }
+    void commit(int8_t shift)
+    {
+        this->shift = shift;
+    }
+    void reset()
+    {
+        shift = 63;
+    }
+
+private:
+    int8_t shift = 63;
 };
 
 template<typename K, typename V, typename H = std::hash<K>, typename E = std::equal_to<K>, typename A = std::allocator<std::pair<K, V> > >
@@ -1300,11 +1330,11 @@ public:
     {
     }
 
-    V & operator[](const K & key)
+    inline V & operator[](const K & key)
     {
         return emplace(key, convertible_to_value()).first->second;
     }
-    V & operator[](K && key)
+    inline V & operator[](K && key)
     {
         return emplace(std::move(key), convertible_to_value()).first->second;
     }
@@ -1327,6 +1357,32 @@ public:
     std::pair<typename Table::iterator, bool> emplace()
     {
         return emplace(key_type(), convertible_to_value());
+    }
+    template<typename M>
+    std::pair<typename Table::iterator, bool> insert_or_assign(const key_type & key, M && m)
+    {
+        auto emplace_result = emplace(key, std::forward<M>(m));
+        if (!emplace_result.second)
+            emplace_result.first->second = std::forward<M>(m);
+        return emplace_result;
+    }
+    template<typename M>
+    std::pair<typename Table::iterator, bool> insert_or_assign(key_type && key, M && m)
+    {
+        auto emplace_result = emplace(std::move(key), std::forward<M>(m));
+        if (!emplace_result.second)
+            emplace_result.first->second = std::forward<M>(m);
+        return emplace_result;
+    }
+    template<typename M>
+    typename Table::iterator insert_or_assign(typename Table::const_iterator, const key_type & key, M && m)
+    {
+        return insert_or_assign(key, std::forward<M>(m)).first;
+    }
+    template<typename M>
+    typename Table::iterator insert_or_assign(typename Table::const_iterator, key_type && key, M && m)
+    {
+        return insert_or_assign(std::move(key), std::forward<M>(m)).first;
     }
 
     friend bool operator==(const flat_hash_map & lhs, const flat_hash_map & rhs)
