@@ -2,7 +2,7 @@
 ```sh
 git clone https://github.com/attractivechaos/udb2
 cd udb2
-# compile directories that include the library code
+# compile directories that include the library code; C++11/14 required for some libraries
 make
 # run benchmarks for compiled programs
 ls */run-test*|grep -v log|xargs -i echo '{} > {}.log 2>&1'|sh
@@ -19,9 +19,11 @@ million, respectively.
 
 Each directory in this repo typically corresponds to one library. Directories
 *not* prefixed with underscores include the library source code and can be
-compiled without external dependencies. Directories prefixed with underscores
-require external dependencies. They are not compiled when you type `make`. You
-have to install the dependencies and then compile manually by yourself.
+compiled without external dependencies (warning: most C++ libraries require
+C++11). Directories prefixed with underscores require third-party libraries or
+compiler-specific extensions. They are not compiled when you type `make`. You
+have to install the external dependencies first and then compile manually by
+yourself.
 
 ## Results
 
@@ -37,4 +39,7 @@ E5-2683 v3, 2.0GHz, 35MB cache; memory: 640GB; gcc: v5.4.0):
 
 ![](https://raw.githubusercontent.com/attractivechaos/udb2/master/__logs/180929-server-a.png)
 
+The [companion blog post][blog] gives more context about this benchmark.
+
 [rst]: https://github.com/attractivechaos/udb2/tree/master/__logs
+[blog]: https://attractivechaos.wordpress.com/2018/01/13/revisiting-hash-table-performance/
