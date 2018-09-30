@@ -14,7 +14,7 @@ This repo implements a *micro*-benchmark to evaluate the performance of various
 hashtable libraries in C/C++. Each library is given *N* 32-bit integers with
 ~25% of them are distinct. The task is to find the occurrence of each distinct
 integer with a dictionary. To show the effect of rehashing, the benchmark
-program runs the task for six rounds with N set to 10, 18, 26, 34, 42 and 50
+program runs the task for six rounds with *N* set to 10, 18, 26, 34, 42 and 50
 million, respectively.
 
 Each directory in this repo typically corresponds to one library. Directories
@@ -27,7 +27,7 @@ yourself.
 
 ## Results
 
-Complete results can be found in the [\_\_log][rst] directory. The following
+Complete results can be found in the [\_\_logs][rst] directory. The following
 figure shows the memory vs runtime when the benchmark is run on "n1-standard-1"
 machine from the Google Cloud:
 
