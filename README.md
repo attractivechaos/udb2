@@ -10,6 +10,7 @@ following figure shows the memory vs runtime when the benchmark is run on
 ![](https://raw.githubusercontent.com/attractivechaos/udb2/master/__logs/180929-gcloud-a.png)
 
 It is worth noting that the results vary with machines. The following figure
-was derived from runs on a server with a much larger cache:
+was derived from runs on a Linux server with a much larger cache (CPU: Xeon
+E5-2683 v3, 2.0GHz, 35MB cache; memory: 640GB; gcc: v5.4.0):
 
 ![](https://raw.githubusercontent.com/attractivechaos/udb2/master/__logs/180929-server-a.png)
