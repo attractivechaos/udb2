@@ -4,4 +4,4 @@ run-test:test.c ../common.c khashl.h
 	$(CC) -O2 -Wall $< -o $@
 
 clean:
-	rm -f run-test*
+	rm -fr run-test*

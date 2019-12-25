@@ -108,7 +108,7 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 	extern khint_t prefix##_putp(HType *h, const khkey_t *key, int *absent); \
 	extern void prefix##_del(HType *h, khint_t k);
 
-#define __KHASHL_IMPL(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
+#define __KHASHL_IMPL_BASIC(SCOPE, HType, prefix) \
 	SCOPE HType *prefix##_init(void) { \
 		return (HType*)kcalloc(1, sizeof(HType)); \
 	} \
@@ -123,7 +123,9 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 			memset(h->used, 0, __kh_fsize(n_buckets) * sizeof(khint32_t)); \
 			h->count = 0; \
 		} \
-	} \
+	}
+
+#define __KHASHL_IMPL_GET(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE khint_t prefix##_getp(const HType *h, const khkey_t *key) { \
 		khint_t k, i, last, n_buckets, mask; \
 		if (h->keys == 0) return 0; \
@@ -137,7 +139,9 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 		} \
 		return !__kh_used(h->used, i)? n_buckets : i; \
 	} \
-	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { return prefix##_getp(h, &key); } \
+	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { return prefix##_getp(h, &key); }
+
+#define __KHASHL_IMPL_RESIZE(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE int prefix##_resize(HType *h, khint_t new_n_buckets) { \
 		khint32_t *new_used = 0; \
 		khint_t j, n_buckets, new_bits, new_mask; \
@@ -182,7 +186,9 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 		kfree(h->used); /* free the working space */ \
 		h->used = new_used, h->bits = new_bits; \
 		return 0; \
-	} \
+	}
+
+#define __KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE khint_t prefix##_putp(HType *h, const khkey_t *key, int *absent) { \
 		khint_t n_buckets, k, i, last, mask; \
 		n_buckets = h->keys? 1U<<h->bits : 0U; \
@@ -215,7 +221,10 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 
 #define KHASHL_INIT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	__KHASHL_TYPE(HType, khkey_t) \
-	__KHASHL_IMPL(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq)
+	__KHASHL_IMPL_BASIC(SCOPE, HType, prefix) \
+	__KHASHL_IMPL_GET(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
+	__KHASHL_IMPL_RESIZE(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
+	__KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq)
 
 #define kh_key(h, x) ((h)->keys[x])
 #define kh_size(h) ((h)->count)
