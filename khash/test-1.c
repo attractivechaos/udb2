@@ -20,7 +20,12 @@ void test_int(uint32_t n, uint32_t x0)
 		x = hash32(x);
 		a.key = get_key(n, x), a.cnt = 0;
 		k = kh_put(32b, h, a, &absent);
+#ifndef UDB2_TEST_DEL
 		z += ++kh_key(h, k).cnt;
+#else
+		if (absent) ++z;
+		else kh_del(32b, h, k);
+#endif
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kh_size(h), z);
 	kh_destroy(32b, h);

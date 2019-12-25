@@ -19,10 +19,14 @@ void test_int(uint32_t n, uint32_t x0)
 		cnt_cell_t t;
 		int absent;
 		x = hash32(x);
-		t.x = get_key(n, x);
+		t.x = get_key(n, x), t.n = 0;
 		k = intmap_putp(h, &t, &absent);
-		if (absent) kh_key(h, k).n = 0;
+#ifndef UDB2_TEST_DEL
 		z += ++kh_key(h, k).n;
+#else
+		if (absent) ++z;
+		else intmap_del(h, k);
+#endif
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u; capacity: %u\n", kh_size(h), z, kh_capacity(h));
 	intmap_destroy(h);

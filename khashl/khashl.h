@@ -65,7 +65,6 @@ typedef unsigned long long khint64_t;
 #define KH_LOCAL static kh_inline klib_unused
 
 typedef khint32_t khint_t;
-typedef khint_t khiter_t;
 
 #define __kh_used(flag, i)       (flag[i>>5] >> (i&0x1fU) & 1U)
 #define __kh_set_used(flag, i)   (flag[i>>5] |= 1U<<(i&0x1fU))
@@ -127,14 +126,13 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 
 #define __KHASHL_IMPL_GET(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE khint_t prefix##_getp(const HType *h, const khkey_t *key) { \
-		khint_t k, i, last, n_buckets, mask; \
+		khint_t i, last, n_buckets, mask; \
 		if (h->keys == 0) return 0; \
 		n_buckets = 1U << h->bits; \
 		mask = n_buckets - 1U; \
-		k = __hash_fn(*key); \
-		i = last = __kh_h2b(k, h->bits); \
+		i = last = __kh_h2b(__hash_fn(*key), h->bits); \
 		while (__kh_used(h->used, i) && !__hash_eq(h->keys[i], *key)) { \
-				i = (i + 1U) & mask; \
+			i = (i + 1U) & mask; \
 			if (i == last) return n_buckets; \
 		} \
 		return !__kh_used(h->used, i)? n_buckets : i; \
@@ -190,7 +188,7 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 
 #define __KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	SCOPE khint_t prefix##_putp(HType *h, const khkey_t *key, int *absent) { \
-		khint_t n_buckets, k, i, last, mask; \
+		khint_t n_buckets, i, last, mask; \
 		n_buckets = h->keys? 1U<<h->bits : 0U; \
 		*absent = -1; \
 		if (h->count >= (n_buckets>>1) + (n_buckets>>2)) { /* rehashing */ \
@@ -199,8 +197,7 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 			n_buckets = 1U<<h->bits; \
 		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		mask = n_buckets - 1; \
-		k = __hash_fn(*key); \
-		i = last = __kh_h2b(k, h->bits); \
+		i = last = __kh_h2b(__hash_fn(*key), h->bits); \
 		while (__kh_used(h->used, i) && !__hash_eq(h->keys[i], *key)) { \
 			i = (i + 1U) & mask; \
 			if (i == last) break; \
@@ -215,6 +212,24 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 	} \
 	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { return prefix##_putp(h, &key, absent); }
 
+#define __KHASHL_IMPL_DEL(SCOPE, HType, prefix, khkey_t, __hash_fn) \
+	SCOPE int prefix##_del(HType *h, khint_t i) { \
+		khint_t j = i, k, mask, n_buckets; \
+		if (h->keys == 0) return 0; \
+		n_buckets = 1U<<h->bits; \
+		mask = n_buckets - 1U; \
+		while (1) { \
+			j = (j + 1U) & mask; \
+			if (j == i || !__kh_used(h->used, j)) break; \
+			k = __kh_h2b(__hash_fn(h->keys[j]), h->bits); \
+			if (k <= i || k > j) \
+				h->keys[i] = h->keys[j], i = j; \
+		} \
+		__kh_set_unused(h->used, i); \
+		--h->count; \
+		return 1; \
+	}
+
 #define KHASHL_DECLARE(HType, prefix, khkey_t) \
 	__KHASH_TYPE(HType, khkey_t) \
 	__KHASH_PROTOTYPES(HType, prefix, khkey_t)
@@ -224,7 +239,8 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 	__KHASHL_IMPL_BASIC(SCOPE, HType, prefix) \
 	__KHASHL_IMPL_GET(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	__KHASHL_IMPL_RESIZE(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
-	__KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq)
+	__KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
+	__KHASHL_IMPL_DEL(SCOPE, HType, prefix, khkey_t, __hash_fn)
 
 #define kh_key(h, x) ((h)->keys[x])
 #define kh_size(h) ((h)->count)
