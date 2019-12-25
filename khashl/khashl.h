@@ -32,7 +32,9 @@
 #include <string.h>
 #include <limits.h>
 
-/* compiler specific configuration */
+/************************************
+ * Compiler specific configurations *
+ ************************************/
 
 #if UINT_MAX == 0xffffffffu
 typedef unsigned int khint32_t;
@@ -66,17 +68,9 @@ typedef unsigned long long khint64_t;
 
 typedef khint32_t khint_t;
 
-#define __kh_used(flag, i)       (flag[i>>5] >> (i&0x1fU) & 1U)
-#define __kh_set_used(flag, i)   (flag[i>>5] |= 1U<<(i&0x1fU))
-#define __kh_set_unused(flag, i) (flag[i>>5] &= ~(1U<<(i&0x1fU)))
-
-#define __kh_fsize(m) ((m) < 32? 1 : (m)>>5)
-
-static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 2654435769U >> (32 - bits); }
-
-#ifndef kroundup32
-#define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
-#endif
+/******************
+ * malloc aliases *
+ ******************/
 
 #ifndef kcalloc
 #define kcalloc(N,Z) calloc(N,Z)
@@ -90,6 +84,26 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 #ifndef kfree
 #define kfree(P) free(P)
 #endif
+
+/****************************
+ * Simple private functions *
+ ****************************/
+
+#ifndef kroundup32
+#define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
+#endif
+
+#define __kh_used(flag, i)       (flag[i>>5] >> (i&0x1fU) & 1U)
+#define __kh_set_used(flag, i)   (flag[i>>5] |= 1U<<(i&0x1fU))
+#define __kh_set_unused(flag, i) (flag[i>>5] &= ~(1U<<(i&0x1fU)))
+
+#define __kh_fsize(m) ((m) < 32? 1 : (m)>>5)
+
+static kh_inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 2654435769U >> (32 - bits); }
+
+/*******************
+ * Hash table base *
+ *******************/
 
 #define __KHASHL_TYPE(HType, khkey_t) \
 	typedef struct { \
@@ -231,8 +245,8 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 	}
 
 #define KHASHL_DECLARE(HType, prefix, khkey_t) \
-	__KHASH_TYPE(HType, khkey_t) \
-	__KHASH_PROTOTYPES(HType, prefix, khkey_t)
+	__KHASHL_TYPE(HType, khkey_t) \
+	__KHASHL_PROTOTYPES(HType, prefix, khkey_t)
 
 #define KHASHL_INIT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	__KHASHL_TYPE(HType, khkey_t) \
@@ -242,9 +256,99 @@ static inline khint_t __kh_h2b(uint32_t hash, uint32_t bits) { return hash * 265
 	__KHASHL_IMPL_PUT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
 	__KHASHL_IMPL_DEL(SCOPE, HType, prefix, khkey_t, __hash_fn)
 
-#define kh_key(h, x) ((h)->keys[x])
+/*****************************
+ * More convenient interface *
+ *****************************/
+
+#define __kh_cached_hash(x) ((x).hash)
+
+#define KHASHL_SET_INIT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
+	typedef struct { khkey_t key; } HType##_s_bucket_t; \
+	static kh_inline khint_t prefix##_s_hash(HType##_s_bucket_t x) { return __hash_fn(x.key); } \
+	static kh_inline int prefix##_s_eq(HType##_s_bucket_t x, HType##_s_bucket_t y) { return __hash_eq(x.key, y.key); } \
+	KHASHL_INIT(KH_LOCAL, HType, prefix##_s, HType##_s_bucket_t, prefix##_s_hash, prefix##_s_eq) \
+	SCOPE HType *prefix##_init(void) { return prefix##_s_init(); } \
+	SCOPE void prefix##_destroy(HType *h) { prefix##_s_destroy(h); } \
+	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { HType##_s_bucket_t t; t.key = key; return prefix##_s_getp(h, &t); } \
+	SCOPE int prefix##_del(HType *h, khint_t k) { return prefix##_s_del(h, k); } \
+	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { HType##_s_bucket_t t; t.key = key; return prefix##_s_putp(h, &t, absent); }
+
+#define KHASHL_MAP_INIT(SCOPE, HType, prefix, khkey_t, kh_val_t, __hash_fn, __hash_eq) \
+	typedef struct { khkey_t key; kh_val_t val; } HType##_m_bucket_t; \
+	static kh_inline khint_t prefix##_m_hash(HType##_m_bucket_t x) { return __hash_fn(x.key); } \
+	static kh_inline int prefix##_m_eq(HType##_m_bucket_t x, HType##_m_bucket_t y) { return __hash_eq(x.key, y.key); } \
+	KHASHL_INIT(KH_LOCAL, HType, prefix##_m, HType##_m_bucket_t, prefix##_m_hash, prefix##_m_eq) \
+	SCOPE HType *prefix##_init(void) { return prefix##_m_init(); } \
+	SCOPE void prefix##_destroy(HType *h) { prefix##_m_destroy(h); } \
+	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { HType##_m_bucket_t t; t.key = key; return prefix##_m_getp(h, &t); } \
+	SCOPE int prefix##_del(HType *h, khint_t k) { return prefix##_m_del(h, k); } \
+	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { HType##_m_bucket_t t; t.key = key; return prefix##_m_putp(h, &t, absent); }
+
+#define KHASHL_CSET_INIT(SCOPE, HType, prefix, khkey_t, __hash_fn, __hash_eq) \
+	typedef struct { khkey_t key; khint_t hash; } HType##_cs_bucket_t; \
+	static kh_inline int prefix##_cs_eq(HType##_cs_bucket_t x, HType##_cs_bucket_t y) { return x.hash == y.hash && __hash_eq(x.key, y.key); } \
+	KHASHL_INIT(KH_LOCAL, HType, prefix##_cs, HType##_cs_bucket_t, __kh_cached_hash, prefix##_cs_eq) \
+	SCOPE HType *prefix##_init(void) { return prefix##_cs_init(); } \
+	SCOPE void prefix##_destroy(HType *h) { prefix##_cs_destroy(h); } \
+	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { HType##_cs_bucket_t t; t.key = key; t.hash = __hash_fn(key); return prefix##_cs_getp(h, &t); } \
+	SCOPE int prefix##_del(HType *h, khint_t k) { return prefix##_cs_del(h, k); } \
+	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { HType##_cs_bucket_t t; t.key = key, t.hash = __hash_fn(key); return prefix##_cs_putp(h, &t, absent); }
+
+#define KHASHL_CMAP_INIT(SCOPE, HType, prefix, khkey_t, kh_val_t, __hash_fn, __hash_eq) \
+	typedef struct { khkey_t key; kh_val_t val; khint_t hash; } HType##_cm_bucket_t; \
+	static kh_inline int prefix##_cm_eq(HType##_cm_bucket_t x, HType##_cm_bucket_t y) { return x.hash == y.hash && __hash_eq(x.key, y.key); } \
+	KHASHL_INIT(KH_LOCAL, HType, prefix##_cm, HType##_cm_bucket_t, __kh_cached_hash, prefix##_cm_eq) \
+	SCOPE HType *prefix##_init(void) { return prefix##_cm_init(); } \
+	SCOPE void prefix##_destroy(HType *h) { prefix##_cm_destroy(h); } \
+	SCOPE khint_t prefix##_get(const HType *h, khkey_t key) { HType##_cm_bucket_t t; t.key = key; t.hash = __hash_fn(key); return prefix##_cm_getp(h, &t); } \
+	SCOPE int prefix##_del(HType *h, khint_t k) { return prefix##_cm_del(h, k); } \
+	SCOPE khint_t prefix##_put(HType *h, khkey_t key, int *absent) { HType##_cm_bucket_t t; t.key = key, t.hash = __hash_fn(key); return prefix##_cm_putp(h, &t, absent); }
+
+/**************************
+ * Public macro functions *
+ **************************/
+
+#define kh_bucket(h, x) ((h)->keys[x])
 #define kh_size(h) ((h)->count)
 #define kh_capacity(h) ((h)->keys? 1U<<(h)->bits : 0U)
 #define kh_end(h) kh_capacity(h)
+
+#define kh_key(h, x) ((h)->keys[x].key)
+#define kh_val(h, x) ((h)->keys[x].val)
+
+/**************************************
+ * Common hash and equality functions *
+ **************************************/
+
+#define kh_eq_generic(a, b) ((a) == (b))
+#define kh_eq_str(a, b) (strcmp((a), (b)) == 0)
+#define kh_hash_dummy(x) ((khint_t)(x))
+
+static kh_inline khint_t kh_hash_uint32(khint_t key) {
+    key += ~(key << 15);
+    key ^=  (key >> 10);
+    key +=  (key << 3);
+    key ^=  (key >> 6);
+    key += ~(key << 11);
+    key ^=  (key >> 16);
+    return key;
+}
+
+static kh_inline khint_t kh_hash_uint64(khint64_t key) {
+	key = ~key + (key << 21);
+	key = key ^ key >> 24;
+	key = (key + (key << 3)) + (key << 8);
+	key = key ^ key >> 14;
+	key = (key + (key << 2)) + (key << 4);
+	key = key ^ key >> 28;
+	key = key + (key << 31);
+	return (khint_t)key;
+}
+
+static kh_inline khint_t kh_hash_str(const char *s) {
+	khint_t h = (khint_t)*s;
+	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)*s;
+	return h;
+}
 
 #endif /* __AC_KHASHL_H */
