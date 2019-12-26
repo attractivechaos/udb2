@@ -21,8 +21,8 @@ class KHashSet {
 	static inline void __kh_set_used(uint32_t *flag, khint_t i) { flag[i>>5] |= 1U<<(i&0x1fU); };
 	static inline void __kh_set_unused(uint32_t *flag, khint_t i) { flag[i>>5] &= ~(1U<<(i&0x1fU)); };
 	static inline khint_t __kh_fsize(khint_t m) { return m<32? 1 : m>>5; }
-	static inline uint32_t __kh_h2b(uint32_t hash, khint_t bits) { return hash * 2654435769U >> (32 - bits); }
-	static inline uint64_t __kh_h2b(uint64_t hash, khint_t bits) { return hash * 11400714819323198485ULL >> (64 - bits); }
+	static inline khint_t __kh_h2b(uint32_t hash, khint_t bits) { return hash * 2654435769U >> (32 - bits); }
+	static inline khint_t __kh_h2b(uint64_t hash, khint_t bits) { return hash * 11400714819323198485ULL >> (64 - bits); }
 public:
 	KHashSet() : bits(0), count(0), used(0), keys(0) {};
 	~KHashSet() { std::free(used); std::free(keys); };
