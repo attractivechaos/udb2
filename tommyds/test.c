@@ -25,11 +25,11 @@ void test_int(uint32_t n, uint32_t x0)
 		intcell_t *p;
 		x = hash32(x);
 		key = get_key(n, x);
-		p = tommy_hashlin_search(&h, compare, &key, hash32(key));
+		p = tommy_hashlin_search(&h, compare, &key, hash_fn(key));
 		if (!p) {
 			p = malloc(sizeof(intcell_t));
 			p->key = key, p->cnt = 1;
-			tommy_hashlin_insert(&h, &p->node, p, hash32(key));
+			tommy_hashlin_insert(&h, &p->node, p, hash_fn(key));
 			++z;
 		} else z += ++p->cnt;
 	}

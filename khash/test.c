@@ -1,6 +1,6 @@
 #include "../common.c"
 #include "khash.h"
-KHASH_INIT(32a, uint32_t, uint32_t, 1, hash32, kh_int_hash_equal)
+KHASH_INIT(32a, uint32_t, uint32_t, 1, hash_fn, kh_int_hash_equal)
 
 void test_int(uint32_t n, uint32_t x0)
 {

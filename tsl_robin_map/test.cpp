@@ -6,7 +6,7 @@
 
 struct Hash32 {
 	inline size_t operator()(const uint32_t x) const {
-		return hash32(x);
+		return hash_fn(x);
 	}
 };
 

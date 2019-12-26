@@ -13,7 +13,7 @@ static int compare_int(const void *const one, const void *const two) // FIXME: t
 
 static unsigned long hash_int(const void *const key)
 {
-	return hash32(*(uint32_t*)key);
+	return hash_fn(*(uint32_t*)key);
 }
 
 void test_int(uint32_t n, uint32_t x0)

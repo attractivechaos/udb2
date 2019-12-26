@@ -3,7 +3,7 @@
 
 struct aux_hash {
 	uint32_t operator() (uint32_t a) const {
-		return hash32(a);
+		return hash_fn(a);
 	};
 };
 

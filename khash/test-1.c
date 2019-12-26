@@ -5,7 +5,7 @@ typedef struct {
 	uint32_t key, cnt;
 } aux_t;
 #define aux_eq(a, b) ((a).key == (b).key)
-#define aux_hash(a) (hash32((a).key))
+#define aux_hash(a) (hash_fn((a).key))
 KHASH_INIT(32b, aux_t, char, 0, aux_hash, aux_eq)
 
 void test_int(uint32_t n, uint32_t x0)

@@ -16,6 +16,14 @@ static inline uint32_t hash32(uint32_t key)
     return key;
 }
 
+/*****************************************************
+ * This is the hash function used by almost everyone *
+ *****************************************************/
+static inline uint32_t hash_fn(uint32_t key)
+{
+	return key;
+}
+
 static double cputime(void)
 {
 	struct rusage r;

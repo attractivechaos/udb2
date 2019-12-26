@@ -13,7 +13,7 @@ struct aux_eq {
 
 struct aux_hash {
 	uint32_t operator() (const aux_t &a) const {
-		return hash32(a.key);
+		return hash_fn(a.key);
 	};
 };
 

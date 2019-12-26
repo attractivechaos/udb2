@@ -1,8 +1,7 @@
 #include "../common.c"
 #include "khashl.h"
 
-#define myhash(a) (hash32(a))
-KHASHL_MAP_INIT(, intmap_t, intmap, uint32_t, int, myhash, kh_eq_generic)
+KHASHL_MAP_INIT(, intmap_t, intmap, uint32_t, int, hash_fn, kh_eq_generic)
 
 void test_int(uint32_t n, uint32_t x0)
 {
