@@ -1,7 +1,7 @@
 #include "../common.c"
 
 // https://github.com/Tessil/hopscotch-map
-// cloned on 2018-09-29
+// cloned on 2019-12-26
 #include "robin_map.h"
 
 struct Hash32 {
