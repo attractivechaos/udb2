@@ -19,24 +19,27 @@ set pointsize 1.5
 
 set yran [0:*]
 
+f(x)=8
+
 set out "udb2-ins.eps"
 set key top right font "Helvetica,16"
-plot \
-	"khashl/run-test.log" u 5:($6*4) t 'khashl' w lp ls 6, \
-	"khash/run-test.log" u 5:($6*4) t 'khash' w lp ls 5, \
-	"ska_bytell_hash_map/run-test.log" u 5:($6*4) t 'ska::bytell_hash_map' w lp ls 2, \
-	"phmap/run-test.log" u 5:($6*4) t 'phmap::flat_hash_map' w lp ls 4, \
-	"tsl_hopscotch_map/run-test.log" u 5:($6*4) t 'tsl::hopscotch_map' w lp ls 8, \
-	"robin_hood/run-test.log" u 5:($6*4) t 'robin_hood::unordered_map' w lp ls 10, \
-	"emilib/run-test.log" u 5:($6*4) t 'emilib::HashMap' w lp ls 7
+set label "Optimal memory" at 0.115, 6.5 font "Helvetica,14" textcolor rgb "#080808"
+plot f(x) lc rgb "#080808" dt 6 not, \
+	"khashl/run-test.log" u 5:6 t 'khashl' w lp ls 6, \
+	"khash/run-test.log" u 5:6 t 'khash' w lp ls 5, \
+	"ska_bytell_hash_map/run-test.log" u 5:6 t 'ska::bytell_hash_map' w lp ls 2, \
+	"phmap/run-test.log" u 5:6 t 'phmap::flat_hash_map' w lp ls 4, \
+	"tsl_hopscotch_map/run-test.log" u 5:6 t 'tsl::hopscotch_map' w lp ls 8, \
+	"robin_hood/run-test.log" u 5:6 t 'robin_hood::unordered_map' w lp ls 10, \
+	"emilib/run-test.log" u 5:6 t 'emilib::HashMap' w lp ls 7
 
 set out "udb2-del.eps"
 set key top left width -4 font "Helvetica,16"
-plot \
-	"khashl/run-test-del.log" u 5:($6*4) t 'khashl' w lp ls 6, \
-	"khash/run-test-del.log" u 5:($6*4) t 'khash' w lp ls 5, \
-	"ska_bytell_hash_map/run-test-del.log" u 5:($6*4) t 'ska::bytell_hash_map' w lp ls 2, \
-	"phmap/run-test-del.log" u 5:($6*4) t 'phmap::flat_hash_map' w lp ls 4, \
-	"tsl_hopscotch_map/run-test-del.log" u 5:($6*4) t 'tsl::hopscotch_map' w lp ls 8, \
-	"robin_hood/run-test-del.log" u 5:($6*4) t 'robin_hood::unordered_map' w lp ls 10, \
-	"emilib/run-test-del.log" u 5:($6*4) t 'emilib::HashMap' w lp ls 7
+plot f(x) lc rgb "#080808" dt 6 not, \
+	"khashl/run-test-del.log" u 5:6 t 'khashl' w lp ls 6, \
+	"khash/run-test-del.log" u 5:6 t 'khash' w lp ls 5, \
+	"ska_bytell_hash_map/run-test-del.log" u 5:6 t 'ska::bytell_hash_map' w lp ls 2, \
+	"phmap/run-test-del.log" u 5:6 t 'phmap::flat_hash_map' w lp ls 4, \
+	"tsl_hopscotch_map/run-test-del.log" u 5:6 t 'tsl::hopscotch_map' w lp ls 8, \
+	"robin_hood/run-test-del.log" u 5:6 t 'robin_hood::unordered_map' w lp ls 10, \
+	"emilib/run-test-del.log" u 5:6 t 'emilib::HashMap' w lp ls 7
