@@ -92,7 +92,7 @@ public:
 	private:
 		void goto_next_element()
 		{
-			DCHECK_LT_F(_bucket, _map->_num_buckets);
+			//DCHECK_LT_F(_bucket, _map->_num_buckets);
 			do {
 				_bucket++;
 			} while (_bucket < _map->_num_buckets && _map->_states[_bucket] != State::FILLED);
@@ -484,8 +484,8 @@ public:
 	/// Returns an iterator to the next element (or end()).
 	iterator erase(iterator it)
 	{
-		DCHECK_EQ_F(it._map, this);
-		DCHECK_LT_F(it._bucket, _num_buckets);
+		//DCHECK_EQ_F(it._map, this);
+		//DCHECK_LT_F(it._bucket, _num_buckets);
 		_states[it._bucket] = State::ACTIVE;
 		_pairs[it._bucket].~PairT();
 		_num_filled -= 1;

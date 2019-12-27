@@ -16,8 +16,13 @@ void test_int(uint32_t n, uint32_t x0)
 		int absent;
 		x = hash32(x);
 		k = h.put(get_key(n, x), &absent);
+#ifndef UDB2_TEST_DEL
 		if (absent) h.value(k) = 0;
 		z += ++h.value(k);
+#else
+		if (absent) ++z;
+		else h.del(k);
+#endif
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u; capacity: %d\n", h.size(), z, h.n_buckets());
 }
