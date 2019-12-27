@@ -8,7 +8,7 @@ typedef struct {
 #define aux_hash(a) (hash_fn((a).key))
 KHASH_INIT(32b, aux_t, char, 0, aux_hash, aux_eq)
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	khash_t(32b) *h;
@@ -28,5 +28,7 @@ void test_int(uint32_t n, uint32_t x0)
 #endif
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kh_size(h), z);
+	x = kh_size(h);
 	kh_destroy(32b, h);
+	return x;
 }

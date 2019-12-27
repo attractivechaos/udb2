@@ -60,7 +60,7 @@ uint64_t traverse_rng(uint32_t n, uint32_t x0)
 
 int main(int argc, char *argv[])
 {
-	void test_int(uint32_t n, uint32_t x0);
+	uint32_t test_int(uint32_t n, uint32_t x0);
 	int c;
 	double t, t0;
 	uint32_t i, m = 5, max = 50000000, n = 10000000, x0 = 1, step;
@@ -83,11 +83,12 @@ int main(int argc, char *argv[])
 	step = (max - n) / m;
 	for (i = 0; i <= m; ++i, n += step) {
 		double t, mem;
+		uint32_t size;
 		t = cputime();
-		test_int(n, x0);
+		size = test_int(n, x0);
 		t = cputime() - t;
 		mem = (peakrss() - m0) / 1024.0 / 1024.0;
-		printf("%d\t%d\t%.3f\t%.3f\t%.4f\t%.4f\n", i, n, t, mem, t * 1e6 / n, mem * 1e6 / n);
+		printf("%d\t%d\t%.3f\t%.3f\t%.4f\t%.4f\n", i, n, t, mem, t * 1e6 / n, mem * 1e6 / size);
 	}
 	return 0;
 }

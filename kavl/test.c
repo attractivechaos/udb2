@@ -8,7 +8,7 @@ typedef struct aux_s {
 #define aux_cmp(a, b) (((a)->key > (b)->key) - ((a)->key < (b)->key))
 KAVL_INIT(32, aux_t, head, aux_cmp)
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	aux_t *root = 0, *p, *q;
@@ -22,5 +22,7 @@ void test_int(uint32_t n, uint32_t x0)
 	}
 	free(p);
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kavl_size(head, root), z);
+	x = kavl_size(head, root);
 	kavl_free(aux_t, head, root, free);
+	return x;
 }

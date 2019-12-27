@@ -10,7 +10,7 @@ typedef struct {
 	UT_hash_handle hh;
 } intcell_t;
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, n_unique = 0, z = 0;
 	intcell_t *h = 0, *r, *tmp;
@@ -32,4 +32,5 @@ void test_int(uint32_t n, uint32_t x0)
 		free(r);
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", n_unique, z);
+	return n_unique;
 }

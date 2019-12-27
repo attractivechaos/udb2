@@ -16,7 +16,7 @@ static unsigned long hash_int(const void *const key)
 	return hash_fn(*(uint32_t*)key);
 }
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	unordered_map h;
@@ -29,5 +29,7 @@ void test_int(uint32_t n, uint32_t x0)
 		z += v;
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", unordered_map_size(h), z);
+	x = unordered_map_size(h);
 	unordered_map_destroy(h);
+	return x;
 }

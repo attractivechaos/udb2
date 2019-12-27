@@ -17,7 +17,7 @@ struct aux_hash {
 	};
 };
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	klib::KHash<aux_t, aux_hash, aux_eq> h;
@@ -31,4 +31,5 @@ void test_int(uint32_t n, uint32_t x0)
 		z += ++h.at(k).cnt;
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", h.size(), z);
+	return h.size();
 }

@@ -7,7 +7,7 @@ typedef struct {
 #define aux_cmp(a, b) (((a).key > (b).key) - ((a).key < (b).key))
 KBTREE_INIT(32, aux_t, aux_cmp)
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	kbtree_t(32) *h;
@@ -23,5 +23,7 @@ void test_int(uint32_t n, uint32_t x0)
 		} else z += ++p->cnt;
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kb_size(h), z);
+	x = kb_size(h);
 	kb_destroy(32, h);
+	return x;
 }

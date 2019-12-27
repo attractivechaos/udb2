@@ -15,7 +15,7 @@ int compare(const void* arg, const void* obj)
 	return *(const uint32_t*)arg != ((const intcell_t*)obj)->key;
 }
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	tommy_hashlin h;
@@ -34,5 +34,7 @@ void test_int(uint32_t n, uint32_t x0)
 		} else z += ++p->cnt;
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", tommy_hashlin_count(&h), z);
+	x = tommy_hashlin_count(&h);
 	tommy_hashlin_done(&h);
+	return x;
 }

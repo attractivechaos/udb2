@@ -2,7 +2,7 @@
 #include "khash.h"
 KHASH_INIT(32a, uint32_t, uint32_t, 1, hash_fn, kh_int_hash_equal)
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	khash_t(32a) *h;
@@ -21,5 +21,7 @@ void test_int(uint32_t n, uint32_t x0)
 #endif
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", kh_size(h), z);
+	x = kh_size(h);
 	kh_destroy(32a, h);
+	return x;
 }

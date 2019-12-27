@@ -10,7 +10,7 @@ typedef struct {
 	tommy_node node;
 } intcell_t;
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	tommy_allocator alloc;
@@ -31,5 +31,7 @@ void test_int(uint32_t n, uint32_t x0)
 		} else z += ++p->cnt;
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", tommy_trie_count(&h), z);
+	x = tommy_trie_count(&h);
 	tommy_allocator_done(&alloc);
+	return x;
 }

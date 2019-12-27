@@ -7,7 +7,7 @@ struct Hash32 {
 	}
 };
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	std::unordered_map<uint32_t, uint32_t, Hash32> h;
@@ -17,4 +17,5 @@ void test_int(uint32_t n, uint32_t x0)
 		z += ++p.first->second;
 	}
 	fprintf(stderr, "# unique keys: %ld; checksum: %u\n", h.size(), z);
+	return h.size();
 }

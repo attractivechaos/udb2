@@ -3,7 +3,7 @@
 
 KHASHL_MAP_INIT(, intmap_t, intmap, uint32_t, int, hash_fn, kh_eq_generic)
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	intmap_t *h;
@@ -22,5 +22,7 @@ void test_int(uint32_t n, uint32_t x0)
 #endif
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u; capacity: %u\n", kh_size(h), z, kh_capacity(h));
+	x = kh_size(h);
 	intmap_destroy(h);
+	return x;
 }

@@ -7,7 +7,7 @@ struct Hash32 {
 	}
 };
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0;
 	__gnu_cxx::hash_map<uint32_t, uint32_t, Hash32> h;
@@ -16,4 +16,5 @@ void test_int(uint32_t n, uint32_t x0)
 		z += ++h[get_key(n, x)];
 	}
 	fprintf(stderr, "# unique keys: %ld; checksum: %u\n", h.size(), z);
+	return h.size();
 }

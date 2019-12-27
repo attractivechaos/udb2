@@ -5,7 +5,7 @@
 #define STB_DEFINE
 #include "stb.h"
 
-void test_int(uint32_t n, uint32_t x0)
+uint32_t test_int(uint32_t n, uint32_t x0)
 {
 	uint32_t i, x, z = 0, size = 0;
 	stb_idict *h;
@@ -24,4 +24,5 @@ void test_int(uint32_t n, uint32_t x0)
 	}
 	fprintf(stderr, "# unique keys: %d; checksum: %u\n", size, z);
 	stb_idict_destroy(h);
+	return size;
 }
