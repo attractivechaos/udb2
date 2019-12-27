@@ -1,7 +1,7 @@
 #include "../common.c"
 
 // https://github.com/troydhanson/uthash
-// checked out on 2018-01-11
+// checked out on 2019-12-26
 #include "uthash.h"
 
 typedef struct {
