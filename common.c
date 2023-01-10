@@ -5,24 +5,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-static inline uint32_t hash32(uint32_t key)
-{
-    key += ~(key << 15);
-    key ^=  (key >> 10);
-    key +=  (key << 3);
-    key ^=  (key >> 6);
-    key += ~(key << 11);
-    key ^=  (key >> 16);
-    return key;
-}
-
-/*****************************************************
- * This is the hash function used by almost everyone *
- *****************************************************/
-static inline uint32_t hash_fn(uint32_t key)
-{
-	return key;
-}
+/***********************************
+ * Measuring CPU time and peak RSS *
+ ***********************************/
 
 static double cputime(void)
 {
@@ -42,10 +27,29 @@ static long peakrss(void)
 #endif
 }
 
+/******************
+ * Key generation *
+ ******************/
+
+static inline uint32_t hash32(uint32_t key)
+{
+    key += ~(key << 15);
+    key ^=  (key >> 10);
+    key +=  (key << 3);
+    key ^=  (key >> 6);
+    key += ~(key << 11);
+    key ^=  (key >> 16);
+    return key;
+}
+
 static inline uint32_t get_key(const uint32_t n, const uint32_t x)
 {
 	return hash32(x % (n>>2));
 }
+
+/**********************************************
+ * For testing key generation time (baseline) *
+ **********************************************/
 
 uint64_t traverse_rng(uint32_t n, uint32_t x0)
 {
@@ -57,6 +61,19 @@ uint64_t traverse_rng(uint32_t n, uint32_t x0)
 	}
 	return sum;
 }
+
+/*****************************************************
+ * This is the hash function used by almost everyone *
+ *****************************************************/
+
+static inline uint32_t hash_fn(uint32_t key)
+{
+	return key;
+}
+
+/*****************
+ * Main function *
+ *****************/
 
 int main(int argc, char *argv[])
 {
