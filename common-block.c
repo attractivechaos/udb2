@@ -48,14 +48,14 @@ typedef struct {
 	uint8_t *data;
 } udb_data_t;
 
-#define MAX_BLOCK_LEN 28
+#define MAX_BLOCK_LEN 16
 
 static inline int32_t get_key_block(const uint32_t n, const uint32_t x, uint8_t block[MAX_BLOCK_LEN])
 {
 	uint32_t y;
 	int32_t i, len;
 	y = hash32(x % (n>>2));
-	len = (y&3) * 4 + 16;
+	len = MAX_BLOCK_LEN;
 	for (i = 0; i < len; i += 4)
 		memcpy(&block[i], &y, 4);
 	return len;
