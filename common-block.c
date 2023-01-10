@@ -44,18 +44,21 @@ static inline uint32_t hash32(uint32_t key)
 }
 
 typedef struct {
-	uint8_t data[16];
+	int32_t len;
+	uint8_t *data;
 } udb_data_t;
 
-static inline uint32_t get_key_block(const uint32_t n, const uint32_t x, uint8_t data[16])
+#define MAX_BLOCK_LEN 28
+
+static inline int32_t get_key_block(const uint32_t n, const uint32_t x, uint8_t block[MAX_BLOCK_LEN])
 {
 	uint32_t y;
-	uint64_t z;
+	int32_t i, len;
 	y = hash32(x % (n>>2));
-	z = (uint64_t)y << 32 | y;
-	memcpy(&data[0], &z, 8);
-	memcpy(&data[8], &z, 8);
-	return y;
+	len = (y&3) * 4 + 16;
+	for (i = 0; i < len; i += 4)
+		memcpy(&block[i], &y, 4);
+	return len;
 }
 
 /**********************************************
@@ -64,12 +67,12 @@ static inline uint32_t get_key_block(const uint32_t n, const uint32_t x, uint8_t
 
 uint64_t traverse_rng(uint32_t n, uint32_t x0)
 {
-	uint8_t data[16];
 	uint64_t sum = 0;
 	uint32_t i, x;
+	uint8_t block[MAX_BLOCK_LEN];
 	for (i = 0, x = x0; i < n; ++i) {
 		x = hash32(x);
-		sum += get_key_block(n, x, data);
+		sum += get_key_block(n, x, block);
 	}
 	return sum;
 }
@@ -115,12 +118,12 @@ uint32_t murmur3_32(const uint8_t* key, size_t len, uint32_t seed) // from wiki
 
 static inline uint32_t hash_fn_block(const udb_data_t x)
 {
-	return murmur3_32(x.data, 16, 11);
+	return murmur3_32(x.data, x.len, 11);
 }
 
 static inline int hash_eq_block(const udb_data_t x, const udb_data_t y)
 {
-	return memcmp(x.data, y.data, 16) == 0;
+	return x.len == y.len && memcmp(x.data, y.data, x.len) == 0;
 }
 
 /*****************
