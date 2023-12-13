@@ -2,7 +2,7 @@
 #include <functional>
 
 // https://github.com/martinus/robin-hood-hashing
-// cloned on 2019-12-26
+// cloned on 2023-12-12
 #include "robin_hood.h"
 
 struct Hash32 {
