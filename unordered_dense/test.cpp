@@ -20,7 +20,7 @@ uint32_t test_int(uint32_t n, uint32_t x0)
 #ifndef UDB2_TEST_DEL
 		z += ++h[get_key(n, x)];
 #else
-		auto p = h.insert(std::pair<uint32_t, uint32_t>(get_key(n, x), i));
+		auto p = h.try_emplace(get_key(n, x), i);
 		if (p.second == false) h.erase(p.first);
 #endif
 	}
