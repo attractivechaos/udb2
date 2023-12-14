@@ -92,20 +92,21 @@ int main(int argc, char *argv[])
 	}
 
 	t = cputime();
-	sum = traverse_rng(n, x0);
+	sum = traverse_rng(max, x0);
 	t0 = cputime() - t;
 	fprintf(stderr, "CPU time spent on RNG: %.3f sec; total sum: %lu\n", t0, (unsigned long)sum);
 	m0 = peakrss();
 
 	step = (max - n) / m;
 	for (i = 0; i <= m; ++i, n += step) {
-		double t, mem;
+		double t, mem, tpm;
 		uint32_t size;
 		t = cputime();
 		size = test_int(n, x0);
 		t = cputime() - t;
-		mem = (peakrss() - m0) / 1024.0 / 1024.0;
-		printf("%d\t%d\t%.3f\t%.3f\t%.4f\t%.4f\n", i, n, t, mem, t * 1e6 / n, mem * 1e6 / size);
+		mem = peakrss() - m0;
+		tpm = (t - t0 * n / max) / n * 1e6;
+		printf("%d\t%d\t%.3f\t%.3f\t%.4f\t%.4f\n", i, n, t, mem/1024./1024., tpm, mem / size);
 	}
 	return 0;
 }

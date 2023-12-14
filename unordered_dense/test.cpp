@@ -5,9 +5,8 @@
 // cloned on 2023-12-12
 #include "unordered_dense.h"
 
-using is_avalanching = void;
-
 struct Hash32 {
+	//using is_avalanching = void;
 	inline size_t operator()(const uint32_t x) const {
 		return hash_fn(x);
 	}

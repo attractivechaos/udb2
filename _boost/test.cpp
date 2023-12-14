@@ -6,6 +6,7 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 
 struct Hash32 {
+	//using is_avalanching = void;
 	inline size_t operator()(const uint32_t x) const {
 		return hash_fn(x);
 	}
