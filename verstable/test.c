@@ -16,16 +16,14 @@ uint32_t test_int(uint32_t n, uint32_t x0)
 		uint32_t key;
 		x = hash32(x);
 		key = get_key(n, x);
-		intmap_t_itr itr = intmap_t_get(&h, key);
+		size_t ori_size = intmap_t_size(&h);
+		intmap_t_itr itr = intmap_t_get_or_insert(&h, key, 0);
 #ifndef UDB2_TEST_DEL
-		if (intmap_t_is_end(itr))
-			itr = intmap_t_insert(&h, key, 0);
 		z += ++itr.data->val;
 #else
-		if (intmap_t_is_end(itr)) {
-			intmap_t_insert(&h, key, 1);
-			++z;
-		} else intmap_t_erase_itr(&h, itr);
+		if (intmap_t_size(&h) == ori_size)
+			intmap_t_erase_itr(&h, itr);
+		else ++z;
 #endif
 	}
 	fprintf(stderr, "# unique keys: %ld; checksum: %u; capacity: %lu\n",
